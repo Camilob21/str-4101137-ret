@@ -3,7 +3,7 @@
 **SoilSense Control · Sistemas en Tiempo Real (4101137) · Universidad Nacional de Colombia, sede Manizales · 2026-2**
 **Docente:** Eng. Samuel Cifuentes · **Repositorio del curso:** [saacifuentesmu/4101137-real-time-systems](https://github.com/saacifuentesmu/4101137-real-time-systems)
 
-- **Equipo (pareja):** Anderson Kaleth Ángel Orozco · Camilo Obando
+- **Equipo (pareja):** Camilo Yela · Camilo Obando
 - **Placas:**
   - Placa del nodo: **ESP32-S3-DevKitC-1**, ESP32-S3 (QFN56) rev. v0.2, 240 MHz, PSRAM 8 MB, flash 16 MB, MAC `7c:0c:5f:5b:17:5c` (Fig. 1.3).
   - Placa del segundo integrante en el lab 1: ESP32 DevKit V1 (ESP32 rev. v3.1, flash 4 MB) (Fig. 1.4).
