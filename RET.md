@@ -10,13 +10,6 @@
   - No se usó la NUCLEO-L476RG: los labs 1 y 2 se hicieron directamente en el ESP32-S3.
 - **Instrumento:** Analog Discovery 2 + WaveForms. Se usaron **Logic** (16 DIO, modo Record), **Scope** con *Measurements* y *Persistence*, y **Patterns** (pulsos de flujo a 1 kHz en DIO 7). No se usó un analizador lógico dedicado.
 - **Toolchain:** Zephyr v4.4.0-14199-g4c6971ba90a3, WSL2/Ubuntu, VS Code, `west`, `esptool` v5.4.0.
-- **Uso de IA (por semana):**
-
-  | Semana | Herramienta | Qué hizo |
-  |---|---|---|
-  | 1–5 | Claude (Anthropic) | Guía paso a paso de cada lab (comandos, cableado y configuración del AD2) |
-  | 1–5 | Claude (Anthropic) | Apoyo en los scripts `ciclo.py`, `analizar_lab02.py` y `analizar_traza.py` |
-  | 1–5 | Claude (Anthropic) | Redacción de este RET a partir de nuestras capturas |
 
   Las mediciones, capturas y montajes son del equipo. La anotación de la Fig. 5.5 se generó con un script sobre nuestra propia captura.
 
