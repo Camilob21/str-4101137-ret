@@ -1,0 +1,38 @@
+# Task C — ANTES de ADR-005 (node_w6 sin el arreglo)
+# e-stop: set 3300 -> disparo -> set 1500 -> clear
+set 3300
+setpoint = 3300 mV
+set 1500
+setpoint = 1500 mV
+t=610000 p_mv=-12 sp_mv=1500 duty=0 flow_x100=0 estop=1 backlog=0
+t=611000 p_mv=19 sp_mv=1500 duty=0 flow_x100=0 estop=1 backlog=0
+t=612000 p_mv=-1 sp_mv=1500 duty=0 flow_x100=0 estop=1 backlog=0
+clear
+e-stop cleared
+# calib
+t=807000 p_mv=1490 sp_mv=1500 duty=45 flow_x100=0 estop=0 backlog=0
+calib
+calibrating zero-flow offset (1000 rounds)...
+calibration done: duration 400.408 ms, console CPU 395.249 ms
+
+# Task C — DESPUÉS de ADR-005 (k_usleep(400) + duty_pct = 0 en task_sampling)
+# e-stop
+set 3300
+setpoint = 3300 mV
+t=121000 p_mv=57 sp_mv=3300 duty=0 flow_x100=0 estop=1 backlog=0
+t=122000 p_mv=38 sp_mv=3300 duty=0 flow_x100=0 estop=1 backlog=0
+t=283000 p_mv=30 sp_mv=3300 duty=0 flow_x100=0 estop=1 backlog=0
+set 1500
+setpoint = 1500 mV
+t=284000 p_mv=37 sp_mv=1500 duty=0 flow_x100=0 estop=1 backlog=0
+clear
+e-stop cleared
+# calib (dos corridas)
+calib
+calibrating zero-flow offset (1000 rounds)...
+t=518000 p_mv=1498 sp_mv=1500 duty=47 flow_x100=0 estop=0 backlog=0
+calibration done: duration 499.933 ms, console CPU 4.152 ms
+calib
+calibrating zero-flow offset (1000 rounds)...
+t=598028 p_mv=1521 sp_mv=1500 duty=45 flow_x100=0 estop=0 backlog=0
+calibration done: duration 503.326 ms, console CPU 15.965 ms

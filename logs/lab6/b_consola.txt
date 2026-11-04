@@ -1,0 +1,9 @@
+status (tras reset, sin contención)
+p=1490 mV sp=1500 mV duty=45% flow_x100=0 estop=0 batches=0 backlog_peak=0 lat_peak_us=5
+
+---- Sent utf8 encoded message: "inv\r" ----
+inv
+inv [lock=k_sem]: control R peak = 15032 us, console critical section = 16920 us
+inv
+t=284000 p_mv=1500 sp_mv=1500 duty=44 flow_x100=0 estop=0 backlog=0
+inv [lock=k_mutex]: control R peak = 1116 us, console critical section = 3001 us.

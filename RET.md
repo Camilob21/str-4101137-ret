@@ -13,7 +13,7 @@
 
   Las mediciones, capturas y montajes son del equipo. La anotación de la Fig. 5.5 se generó con un script sobre nuestra propia captura.
 
-**Documento vivo:** se actualiza cada semana. Se entrega en el workshop (semana 7) y al cierre (semana 14). **Estado: labs 1 a 5 completos.**
+**Documento vivo:** se actualiza cada semana. Se entrega en el workshop (semana 7) y al cierre (semana 14). **Estado: labs 1 a 6 completos.**
 
 **Regla de la casa:** *"show me the trace"*. Toda afirmación de tiempo cita una medición y su instrumento.
 
@@ -29,7 +29,7 @@
 
 ---
 
-## Resultados clave (semanas 1–5)
+## Resultados clave (semanas 1–6)
 
 | Pregunta del lab | Respuesta medida | Evidencia |
 |---|---|---|
@@ -43,6 +43,10 @@
 | ¿Qué pila está más justa? (L4) | `ISR0` 464/512 B (**90 %**); de la aplicación, `console_tid` 992/2048 B (48 %) | Anexo C |
 | ¿Se ve la preempción en la traza? (L5) | Sí: tick → `console_tid` READY → `sampling_tid` corre en **19.8 µs** → `control_tid` | Fig. 5.5 |
 | ¿Cuánto perturba la traza? (L5) | Jitter máximo **2.2 → 18.1 µs (+15.9 µs)**; `C_samp` 0.74 → 10.75 µs | Fig. 5.8–5.9 |
+| ¿RM pierde la Fig. 4.13 y EDF no? (L6) | Sí: RM, τ2 pierde su deadline de 7 ms (termina en **8.048 ms**); EDF, **0 pérdidas en 60 s** | Fig. 6.1–6.3 |
+| ¿Se reproduce la inversión? (L6) | Con `k_sem`, control espera **15 032 µs**; con `k_mutex`, **1 116 µs** (B = 3.17 ms medido, 4 ms adoptado) | Fig. 6.9–6.11, ADR-002 |
+| ¿`calib` y el e-stop arreglados? (L6) | `calib` CPU **395.2 → 4.2 ms** (13.3 ms con traza); e-stop **9.056 ms → 0.34 µs** | Fig. 6.12–6.16, ADR-005 |
+| ¿Caben los sensores de Daniela? (L6) | U = 0.7212 pasa LL y la hiperbólica, pero con B = 4 ms la RTA da sensor_B **11.2 ms > 10 ms**: sí, solo con secciones críticas ≤ 2.7 ms | §4 |
 
 ---
 
@@ -62,19 +66,24 @@ Cada requisito es una frase del tipo *cuando/mientras `<condición>`, el sistema
 | REQ-TELE-01 | Mientras el nodo esté en operación, el sistema deberá emitir una línea de telemetría cada 1 s ± 100 ms (soft). |
 | REQ-FLOW-01 | Cuando se acumulen 100 pulsos de flujo, el sistema deberá actualizar el caudal en un máximo de 100 ms. |
 | REQ-HMI-01 | Mientras haya una pantalla conectada, el sistema deberá refrescar la HMI cada 500 ms (soft). |
+| REQ-CONS-02 | Cuando el operador ejecute `calib`, el sistema deberá completar las 1000 lecturas en un máximo de 1 s, a la prioridad más baja (firm). |
+
+Equivalencias con la guía del lab 6: su REQ-ESTOP-01 es nuestro **REQ-CTRL-02**, y su REQ-CONS-01 (`calib` en 1 s) es nuestro **REQ-CONS-02** (nuestro REQ-CONS-01 ya era el eco de la consola).
 
 ### 1.2 Tareas, tipo y C_i medido
 
 `C_i` = ancho del pulso del GPIO de instrumentación de cada tarea (entrada → salida). En el kernel, la columna sin traza es la que vale para el análisis. La columna con traza solo muestra la perturbación del observador (semana 5).
 
-| Tarea | REQ | Tipo | Periodo T | Plazo D | C_i superloop (S3) | C_i kernel, sin traza | C_i kernel, con traza | Instrumento |
-|---|---|---|---|---|---|---|---|---|
-| Muestreo (`task_sampling`) | SAMP-01/02, CTRL-02 (detección) | Hard | 1 ms | = T | 0.97 µs | **0.742 µs** prom., 0.810 µs máx. | 10.75 µs prom., 11.47 µs máx. | GPIO4 · AD2 Logic 5 MHz (L2) · AD2 Scope 6.67 MHz (L5) |
-| Control PI (`task_control`) | CTRL-01/02 | Hard | 10 ms | = T | 0.56 µs | ≈ 0.4 µs (lectura visual) | ≈ 5.3 µs (est., de la traza) | GPIO5 · AD2 Logic 5 MHz (L2) · Scope Persistence (L4) · traza CTF (L5) |
-| Consola (`task_console`) | CONS-01 | Firm | aperiódica (sondeo cada 5 ms en el kernel) | 20 ms | ≈ 54 µs por carácter; `calib`: 398–403 ms | `calib`: 399.3 ms | — | GPIO6 · AD2 Logic 1 MHz (L3, L4) |
-| Telemetría (`task_telemetry`) | TELE-01 | Soft | 1 s | ≈ T | 64.9 µs (65.1 prom., 68 máx.) | 63.8 µs prom. (60–80, resolución 10 µs) | — | GPIO7 · AD2 Logic (L2, L3, L4) |
-| Lote de flujo (`task_flow_batch`) | FLOW-01 | — | esporádica: cada 100 pulsos (100 ms a 1 kHz) | 100 ms | 2 µs prom., 8 µs máx. | — | — | GPIO15 · AD2 Logic 500 kHz (L2) |
-| HMI (`task_display`) | HMI-01 | Soft | 500 ms | ≈ T | sin OLED: la tarea no hace nada | — | — | GPIO17 (línea plana) |
+| Tarea | REQ | Tipo | Periodo T | Plazo D | C_i superloop (S3) | C_i kernel, sin traza | C_i kernel, con traza | C_i semana 6 (usado en el RTA) | Instrumento |
+|---|---|---|---|---|---|---|---|---|---|
+| Muestreo (`task_sampling`) | SAMP-01/02, CTRL-02 (detección) | Hard | 1 ms | = T | 0.97 µs | **0.742 µs** prom., 0.810 µs máx. | 10.75 µs prom., 11.47 µs máx. | **1.02 µs** (Fig. 6.5) | GPIO4 · AD2 Logic 5 MHz (L2) · AD2 Scope 6.67 MHz (L5) · Logic 16.7 MHz (L6) |
+| Control PI (`task_control`) | CTRL-01/02 | Hard | 10 ms | = T | 0.56 µs | ≈ 0.4 µs (lectura visual) | ≈ 5.3 µs (est., de la traza) | **1.063 µs**, incluye tomar y soltar el `k_mutex` (Fig. 6.4) | GPIO5 · AD2 Logic 5 MHz (L2) · Scope Persistence (L4) · traza CTF (L5) · Logic 16.7 MHz (L6) |
+| Consola (`task_console`) | CONS-01 | Firm | aperiódica (sondeo cada 5 ms en el kernel) | 20 ms | ≈ 54 µs por carácter; `calib`: 398–403 ms | `calib`: 399.3 ms | — | `calib` antes: 400.4 ms (CPU 395.2 ms); después: 499.9 ms (CPU 4.2 ms) | GPIO6 · AD2 Logic 1 MHz (L3, L4) · `k_thread_runtime_stats` (L6) |
+| Telemetría (`task_telemetry`) | TELE-01 | Soft | 1 s | ≈ T | 64.9 µs (65.1 prom., 68 máx.) | 63.8 µs prom. (60–80, resolución 10 µs) | — | **72.28 µs** (Fig. 6.6) | GPIO7 · AD2 Logic (L2, L3, L4, L6) |
+| Lote de flujo (`task_flow_batch`) | FLOW-01 | — | esporádica: cada 100 pulsos (100 ms a 1 kHz) | 100 ms | 2 µs prom., 8 µs máx. | — | — | — (entrada de flujo desconectada en L6) | GPIO15 · AD2 Logic 500 kHz (L2) |
+| HMI (`task_display`) | HMI-01 | Soft | 500 ms | ≈ T | sin OLED: la tarea no hace nada | — | — | — | GPIO17 (línea plana; en L6 marca la sección crítica de la consola) |
+
+Los `C_i` de la semana 6 se midieron en `node_w6` con la planta simulada (sin ADC); con el potenciómetro real `C_samp` sería mayor.
 
 **Criterio de clasificación (lab 1).** **Hard** significa que perder el plazo es una falla física: una muestra tardía corrompe el control y la detección de sobrepresión, y una válvula que actúa tarde revienta mangueras. **Firm** significa que el resultado tardío se descarta sin daño: una respuesta de consola tardía no sirve, pero no rompe nada. **Soft** significa que el resultado tardío aún sirve con menor calidad (telemetría, HMI). El lote de flujo no tiene plazo propio: es un cálculo de apoyo.
 
@@ -90,7 +99,8 @@ Usamos el mismo cableado en los labs 2 a 5. Los seis pines de instrumentación s
 | DIO 3 | GPIO7 | `instr_tele` | Logic |
 | DIO 4 | GPIO15 | `instr_flow` | Logic |
 | DIO 5 | GPIO17 | `instr_disp` | Logic |
-| DIO 7 (`fin` / `pulsos`) | GPIO16 | entrada de pulsos de flujo, 1 kHz | Patterns (salida) |
+| DIO 6 | GPIO21 | válvula (PWM) | Logic (semana 6) |
+| DIO 7 (`fin` / `pulsos`) | GPIO16 | entrada de pulsos de flujo, 1 kHz | Patterns (salida; desconectado en la semana 6) |
 | 1+ / 1− | GPIO4 / GND | `instr_samp` | Scope CH1 |
 | 2+ / 2− | GPIO5 / GND | `instr_ctrl` | Scope CH2 |
 | ⏚ | GND | tierra común | — |
@@ -137,12 +147,61 @@ La ISR del tick encola su instante de liberación en un `k_msgq`. El muestreo de
 
 - **Cambio de contexto.** El hueco GPIO es de 8.56 µs como máximo (Fig. 4.6). Con ≈ 2.5 × 10³ cambios/s, eso es **1.2–2.2 % de CPU**. El thread analyzer cuenta 3.8 µs de CPU por activación del muestreo, frente a un `C_samp` de 0.74 µs: el resto es kernel.
 - **RAM.** Las pilas de los hilos suman 9.7 KB (1536 + 1024 × 2 + 2048 × 3) más `main`.
-- **Estado compartido.** Queda estado compartido entre hilos sin proteger; se resuelve en la semana 6.
-- **Pilas justas.** La pila de ISR queda al 90 % (ADR-002).
+- **Estado compartido.** Quedaba estado compartido entre hilos sin proteger; resuelto en la semana 6 con un `k_mutex` (ADR-002).
+- **Pilas justas.** La pila de ISR queda al 90 % (ADR-006).
 
 **Estado:** Aceptado (semana 4).
 
-### ADR-002 — Márgenes de pila antes de producción
+### ADR-002 — Política de exclusión mutua del nodo
+
+**Contexto.** Control (prioridad 3) y la consola (prioridad 9) comparten `setpoint_mv`, `integral_mv` y `estop` (§3.3). Con un `k_sem` de 1 como candado, la telemetría (prioridad 8), que no lo usa, desaloja a la consola mientras lo tiene: control esperó **15 032 µs** (Fig. 6.9), más que su periodo de 10 ms (viola REQ-CTRL-01).
+
+**Decisión.** Todo recurso compartido entre prioridades se protege con `k_mutex` (herencia de prioridad, PIP), nunca con un semáforo binario. En `node_w6`: `node_mutex` en `control_thread`, `set`, `clear` e `inv`. El muestreo (1 kHz) no toma candados.
+
+**Justificación (con números).**
+
+| | `k_sem` | `k_mutex` |
+|---|---|---|
+| R máx. de control durante `inv` | **15 032 µs** (Fig. 6.9) | **1 116 µs** (Fig. 6.10) |
+| Ancho de la sección crítica (GPIO17) | 16 920 µs (estirada por la telemetría) | **3.173 ms** (Fig. 6.11); firmware: 3 001 µs |
+
+- **B adoptado = 4 ms** para el RTA, cota conservadora sobre los 3.17 ms medidos.
+- RTA (§4): R_ctrl = 4 006 µs ≤ 10 ms con el nodo actual y 8 010 µs ≤ 10 ms con las tareas de Daniela.
+- Con Daniela, sensor_B queda entre control y la consola y sufre bloqueo *push-through*: R = 11 209 µs > 10 ms. Cumple si B ≤ 2.78 ms (`scripts/rta.py`).
+- **Regla derivada:** las secciones críticas de la consola duran ≤ 2.7 ms. `set` y `clear` duran µs; los 3 ms son del experimento `inv`.
+
+**Estado:** Aceptado e implementado (semana 6). `lock sem` solo existe para reproducir el fallo.
+
+### ADR-005 — E-stop y `calib` arreglados en la fuente
+
+**Contexto.**
+
+- **REQ-CONS-02.** `calib` gastaba 395.2 ms de CPU (400.4 ms de duración) a la prioridad más baja. Con las tareas de Daniela, las de arriba suman U = 0.7212 y le dejan 278.8 ms por segundo: **no cabe**.
+- **REQ-CTRL-02.** El muestreo detecta la sobrepresión, pero la válvula solo baja cuando control pone duty = 0 y el siguiente paso de PWM escribe el pin. Peor caso: T_samp + T_ctrl + C_ctrl + T_samp + C_samp = **12.0 ms > 5 ms**. Medido: **9.056 ms** (Fig. 6.12).
+
+**Decisión.**
+
+1. En `cmd_calib`, `k_busy_wait(400)` → `k_usleep(400)`: la consola espera dormida.
+2. En `task_sampling`, la rama que pone `estop` también pone `duty_pct = 0`; el paso de PWM del mismo trabajo baja la válvula.
+
+**Justificación (con números).**
+
+| | Antes | Después |
+|---|---|---|
+| `calib` CPU | 395.2 ms (firmware) | **4.2 ms** (firmware); ≤ 13.3 ms (traza, incluye su costo) |
+| `calib` duración | 400.4 ms (firmware) / 401.6 ms (AD2, Fig. 6.13) | 499.9 ms (firmware) / 501 ms (AD2, Fig. 6.15) |
+| ¿Cabe con Daniela? (278.8 ms disponibles) | ✘ 395.2 > 278.8 ms | ✔ 13.3 ≤ 278.8 ms; dura 0.5 s ≤ 1 s |
+| E-stop, detección → válvula baja (medido) | **9.056 ms** (Fig. 6.12) | **0.339 µs** (Fig. 6.14) |
+| E-stop, suma del peor caso | 12.0 ms ✘ | T_samp + C_samp = **1.0 ms** ✔ |
+
+- Cada `k_usleep(400)` se redondea al tick de 100 µs: 4 ticks + el tick en curso ≈ 0.5 ms. Por eso 1000 settles duran ≈ 500 ms y caben en 1 s.
+- **Con un tick de 1 kHz** cada sleep duraría ≈ 2 ms y `calib` ≈ 2 s: incumpliría el segundo casi sin usar CPU.
+
+**Estado:** Aceptado e implementado (semana 6, `firmware/lab06/node_w6`).
+
+### ADR-006 — Márgenes de pila antes de producción
+
+*(Era el ADR-002 hasta la semana 5; se renumeró porque la guía del lab 6 asigna el ADR-002 a la exclusión mutua.)*
 
 **Contexto.** El thread analyzer bajo carga (pulsos de flujo, `set 2500`, `calib`, 2090 s de operación) muestra `ISR0` en 464/512 B (90 %, 48 B libres) e `idle` en 208/256 B (81 %, 48 B libres). Los hilos de la aplicación quedan por debajo del 50 %: el más alto es `console_tid`, con 992/2048 B (Anexo C).
 
@@ -150,13 +209,13 @@ La ISR del tick encola su instante de liberación en un `k_msgq`. El muestreo de
 
 **Justificación.** 48 B libres equivalen a una o dos tramas de interrupción anidadas más. La ISR del flujo y la del tick comparten esa pila, y la traza (semana 5) añade trabajo en ISR. El cambio no aumenta la RAM: suma 768 B en ISR e idle y libera 1024 B en display (ahorro neto de 256 B).
 
-**Estado:** Propuesto (a verificar con `threads` en la semana 6).
+**Estado:** Propuesto (pendiente de verificar con `threads`).
 
 ---
 
 ## 3. Evidencia por semana
 
-Cada entrada cita los `REQ` que verifica. La matriz de trazabilidad completa está en la [§3.6](#36-matriz-de-trazabilidad-rtm).
+Cada entrada cita los `REQ` que verifica. La matriz de trazabilidad completa está en la [§3.7](#37-matriz-de-trazabilidad-rtm).
 
 ### 3.1 Semana 1 — Bring-up: equipo, placa y toolchain
 
@@ -474,7 +533,7 @@ Nuestra línea de telemetría tiene 69 caracteres. A 115200 8N1, cada carácter 
 | `estop` | `sampling_thread` (sobrepresión y joystick) y `main` (comando `clear`) | `main` (`task_control`) |
 | `setpoint_mv` | `main` (comando `set`) y `sampling_thread` (joystick, en `joystick_update`) | `main` (control, telemetría) |
 
-**¿Por qué funciona hoy?** Son `int` y `bool` alineados de 32 bits, y en el Xtensa LX7 una carga o un almacenamiento de una palabra es atómico, así que nadie lee un valor a medias. Lo que queda sin proteger son las secuencias leer-modificar-escribir: `setpoint_mv ± 10` contra `set`, o `estop` puesto y borrado por dos hilos. Esas secuencias pueden perder una actualización. Se resuelve en la semana 6.
+**¿Por qué funciona hoy?** Son `int` y `bool` alineados de 32 bits, y en el Xtensa LX7 una carga o un almacenamiento de una palabra es atómico, así que nadie lee un valor a medias. Lo que queda sin proteger son las secuencias leer-modificar-escribir: `setpoint_mv ± 10` contra `set`, o `estop` puesto y borrado por dos hilos. Esas secuencias pueden perder una actualización. **Semana 6:** control, `set` y `clear` usan el `k_mutex` del ADR-002. El joystick (dentro del muestreo) sigue sin candado, porque el hilo de 1 kHz no debe bloquearse; en nuestro montaje no hay joystick.
 
 **Lectura.** Mismo código en dos chips: el máximo en reposo lo pone el driver UART, no el reloj. El primer hilo aísla el muestreo de `calib`, pero cualquier tarea Hard que siga en el lazo hereda el bloqueo.
 
@@ -585,7 +644,7 @@ Esta es una cota superior, porque el hueco GPIO incluye las llamadas de kernel a
 
 La columna de CPU se calculó con los ciclos que imprime el analizador. Suman 4.975 × 10¹¹ ciclos = 2072.8 s a 240 MHz, lo que coincide con el uptime de `t=2090000` ms.
 
-**El más cercano a su límite es `ISR0`: 464/512 B (90 %, 48 B libres).** De los hilos de la aplicación, el más alto es `console_tid` (48 %), porque `printk` con formato corre en su pila. La propuesta está en el ADR-002.
+**El más cercano a su límite es `ISR0`: 464/512 B (90 %, 48 B libres).** De los hilos de la aplicación, el más alto es `console_tid` (48 %), porque `printk` con formato corre en su pila. La propuesta está en el ADR-006.
 
 **Lectura.** Con `calib`, el control pasa de ≈ 403 ms a ≈ 10 ms y el jitter de muestreo de ≈ 403 ms a ≤ 9 µs, porque `calib` ahora corre en `console_tid` (prioridad 9) y tanto el muestreo (2) como el control (3) la desalojan. El precio es ≈ 1–2 % de CPU en cambios de contexto y ≈ 10 KB de pilas.
 
@@ -718,7 +777,105 @@ En la captura normal de 3 s (Fig. 5.3): `idle` 9 %, `sampling_tid` 3 %, los dem�
 
 ---
 
-### 3.6 Matriz de trazabilidad (RTM)
+### 3.6 Semana 6 — Planificabilidad, tiempo de respuesta e inversión de prioridad · verifica REQ-CTRL-01, REQ-CTRL-02, REQ-CONS-02
+
+**Firmware** (en [`firmware/lab06/`](firmware/lab06/)):
+
+- **`fig413/`.** τ1 (C = 2 ms, T = 5 ms) y τ2 (C = 4 ms, T = 7 ms). El "cómputo" es un bucle calibrado que gasta CPU: 15 993 lazos/ms, `burn(2000 us)` = 2002 µs. RM por defecto (τ1 prioridad 4, τ2 prioridad 5). EDF con `edf.conf` (`CONFIG_SCHED_DEADLINE=y`, ambos en prioridad 5, `k_thread_absolute_deadline_set` **antes** de dormir). Pines: GPIO4 τ1, GPIO5 τ2, GPIO6 pulso de pérdida, GPIO7 inicio de hiperperiodo (35 ms).
+- **`node_w6/`.** El nodo de la semana 4 más:
+  - el candado control/consola (`lock sem|mutex`);
+  - el comando `inv`: la consola toma el candado, control lo pide y la telemetría arranca 15 ms de CPU en el mismo tick;
+  - GPIO17 = sección crítica de la consola (B), GPIO15 = detección del e-stop;
+  - CPU de `calib` con `k_thread_runtime_stats`.
+  - Ya incluye el ADR-005.
+
+**Nota de lectura.** El workspace de WaveForms conserva los nombres del nodo. En las Fig. 6.1–6.3: `sampling` = τ1, `control` = τ2, `consola` = pérdida, `telemetria` = inicio de hiperperiodo.
+
+**Tabla de la semana 6:**
+
+| Medida | Predicción | Valor medido | Referencia | Evidencia |
+|---|---|---|---|---|
+| Fig. 4.13 con RM: ¿quién pierde y cuándo? | τ2 en t = 7 ms | **τ2, job 0: deadline 7.000 ms, termina en 8.048 ms**; 116 pérdidas/s, `late_max` = 1115 µs | libro: τ2 en t = 7 ms | Fig. 6.1, [`a_rm_consola.txt`](logs/lab6/a_rm_consola.txt) |
+| Fig. 4.13 con EDF: pérdidas en 60 s | 0 | **0** (τ1 R máx. 4148 µs ≤ 5 ms; τ2 6099 µs ≤ 7 ms) | libro: ninguna, U ≈ 0.97 ≤ 1 | Fig. 6.2–6.3, [`a_edf_consola.txt`](logs/lab6/a_edf_consola.txt) |
+| R máx. de control, sin contención | 50–100 µs | **≈ 13.3 µs (est.)**: 8.29 µs de GPIO4↑ a GPIO5↓ + `lat_peak_us` = 5 µs | RTA: 2.1 µs (ver §4) | Fig. 6.7–6.8 |
+| R máx. de control con inversión (`k_sem`) | ≈ 15 000 µs | **15 032 µs** | — (eso es lo roto) | Fig. 6.9, [`b_consola.txt`](logs/lab6/b_consola.txt) |
+| R máx. de control con `k_mutex` | 1 000–2 000 µs | **1 116 µs** | ≤ C + B + interferencia = 4 006 µs ✔ | Fig. 6.10 |
+| B: sección crítica más larga del hilo bajo | ≈ 3 000 µs | **3.173 ms** (GPIO17); 3 001 µs (firmware) → **B = 4 ms adoptado** | su pulso GPIO | Fig. 6.11 |
+| `calib` CPU / duración, antes | ≈ 400 / ≈ 405 ms | **395.2 / 400.4 ms** (AD2: 401.6 ms) | gira: CPU ≈ duración | Fig. 6.13, [`c_consola.txt`](logs/lab6/c_consola.txt) |
+| `calib` CPU / duración, después | ≈ 2–10 / ≈ 500 ms | **4.2 / 499.9 ms** (traza: ≤ 13.3 ms; AD2: 501 ms) | | Fig. 6.15–6.16 |
+| E-stop detección → válvula baja, antes / después | ≤ 11 ms / decenas de µs | **9.056 ms / 0.339 µs** | suma: 12.0 ms / 1.0 ms | Fig. 6.12, 6.14 |
+
+#### Tarea A — Fig. 4.13 en vivo
+
+![](img/lab6/e01_a1_rm_perdida.png)
+*Fig. 6.1 — **RM.** De 0 a 2 ms corre τ1, de 2 a 5 ms τ2; en t = 5 ms τ1 desaloja a τ2, que termina en ≈ 8 ms, después de su deadline de 7 ms. DIO2 marca cada pérdida (E-A1).*
+
+| | |
+|---|---|
+| ![](img/lab6/e02_a2_edf_cumple.png) | ![](img/lab6/e03_a3_edf_sin_trigger.png) |
+| *Fig. 6.2 — **EDF.** En t = 5 ms τ2 sigue (deadline 7 < 10); termina en **6.034 ms** (cursor) (E-A2).* | *Fig. 6.3 — EDF con trigger en el pin de pérdida, modo Normal: **Armed** sin disparar en 60 s (E-A3).* |
+
+**Lectura.**
+
+- U = 0.971 > 0.828 (Liu & Layland, n = 2): RM sin garantía. La RTA da R2 = 8 ms > 7 ms, y RM pierde, como predice el libro.
+- 116 pérdidas/s ≈ 4 por hiperperiodo de 35 ms. Una es la del libro (≈ 1 ms tarde, `late_max` = 1115 µs). Las demás caen en trabajos que la teoría deja con holgura ≈ 0, y el sobrecosto real del kernel las vuelve tardías.
+- EDF es exacto para U ≤ 1: 0 pérdidas en 8575 trabajos de τ2.
+- El deadline se fija antes de dormir. Si se fija al despertar, el kernel ya eligió el hilo con el deadline viejo y la corrida se ve como RM.
+
+#### Tarea B — La inversión y su arreglo
+
+**`C_i` sin contención** (Logic 16.7 MHz, cursores):
+
+| | | |
+|---|---|---|
+| ![](img/lab6/e05_ancho_samp.png) | ![](img/lab6/e04_ancho_ctrl.png) | ![](img/lab6/e06_ancho_tele.png) |
+| *Fig. 6.5 — `samp`: **1.02 µs**.* | *Fig. 6.4 — `ctrl`: **1.063 µs** (incluye el mutex).* | *Fig. 6.6 — `tele`: **72.28 µs**.* |
+
+![](img/lab6/e07_status_sin_contencion.png)
+*Fig. 6.7 — `status` tras `reset` y 30 s: `lat_peak_us=5`, `backlog_peak=0`.*
+
+![](img/lab6/e08_b1_sin_contencion.png)
+*Fig. 6.8 — **Sin contención.** El tick dispara `samp` (GPIO4, −7.20 µs, ancho 0.908 µs). `samp` termina y corre `ctrl` (GPIO5, de +0.06 a +1.09 µs). Hueco de cambio de contexto: 6.36 µs. R ≈ 5 µs (`lat_peak_us`) + 8.29 µs ≈ **13.3 µs** (E-B1).*
+
+![](img/lab6/e09_b2_inversion_ksem.png)
+*Fig. 6.9 — **Inversión con `k_sem`.** t ≈ 0: la consola toma el candado (DIO5). t ≈ 2 ms: control lo pide y se bloquea (DIO1 alto), y la telemetría (DIO3) desaloja a la consola. 2–17 ms: corre la media y control espera a la media. t ≈ 17 ms: la consola suelta y control corre. **R = 15 032 µs > 10 ms** (E-B2).*
+
+| | |
+|---|---|
+| ![](img/lab6/e10_b3_mutex_pi.png) | ![](img/lab6/e11_b3_ancho_b.png) |
+| *Fig. 6.10 — **`k_mutex`.** t ≈ 2 ms: control pide y la consola hereda la prioridad 3; la telemetría no puede desalojarla. t ≈ 3 ms: la consola suelta y corre control (**R = 1 116 µs**); después corre la telemetría (E-B3).* | *Fig. 6.11 — **B** = ancho de GPIO17 con `k_mutex`: **3.173 ms** (E-B3).* |
+
+**Lectura.** El semáforo no tiene dueño, así que nadie hereda prioridad: control esperó a una tarea que ni usa el candado. Con PIP la espera queda acotada por la sección crítica de la consola. El arreglo está en el ADR-002.
+
+#### Tarea C — Arreglado en la fuente (ADR-005)
+
+Montaje: entrada de flujo desconectada; DIO4 → GPIO15 (detección, `instr_set(&instr_flow, estop)`), DIO6 → GPIO21 (válvula). Disparo con `set 3300`, reinicio con `set 1500` y `clear`.
+
+| | |
+|---|---|
+| ![](img/lab6/e12_c1_estop_antes.png) | ![](img/lab6/e14_c2_estop_despues.png) |
+| *Fig. 6.12 — **E-stop antes**: detección (DIO4↑) → válvula baja (DIO6↓) = **9.056 ms** (E-C1).* | *Fig. 6.14 — **E-stop después**: **339.4 ns**, en el mismo trabajo de muestreo (E-C2).* |
+
+| | |
+|---|---|
+| ![](img/lab6/e13_c3_calib_antes.png) | ![](img/lab6/e15_c4_calib_despues.png) |
+| *Fig. 6.13 — **`calib` antes**: `cons` alto **401.6 ms**; la consola gira (E-C3).* | *Fig. 6.15 — **`calib` después**: `cons` alto **501 ms**, pero dormida casi todo el tiempo (E-C4).* |
+
+![](img/lab6/e16_calib_cpu_traza.png)
+*Fig. 6.16 — CPU de `calib` desde la traza CTF (método de la semana 5, [`scripts/calib_cpu.py`](scripts/calib_cpu.py)). 0.33 % de bytes perdidos en el enlace (62 huecos, recuperados); 567 de 1000 settles en una ventana de 547 ms; mediana **13.33 µs** por settle → **≤ 13.3 ms**. Es una cota superior, porque incluye el costo del trazado; el firmware sin traza da 4.152 ms. Detalle en [`calib_cpu_traza.txt`](logs/lab6/calib_cpu_traza.txt).*
+
+**Lectura.** Las dos fallas venían de dónde se gastaba el tiempo, no de la utilización:
+
+- `calib` giraba ≈ 400 ms. Ahora duerme y usa ≈ 4 ms de CPU.
+- La válvula esperaba al control (hasta ≈ 11 ms). Ahora baja en el mismo trabajo que detecta, en 0.34 µs.
+
+Las sumas y el encaje con las tareas de Daniela están en el ADR-005 y la §4.
+
+> **¿Y FreeRTOS?** Solo tiene prioridades fijas: sin EDF en el kernel, la Tarea A no se reproduce tal cual, y con U = 0.97 la respuesta profesional es rediseñar el conjunto hasta que RM pase. `xSemaphoreCreateMutex` hereda prioridad; los semáforos binarios permiten exactamente el error de la Tarea B. La lección es la misma en ambos kernels: entre prioridades, mutex con herencia, nunca semáforo.
+
+---
+
+### 3.7 Matriz de trazabilidad (RTM)
 
 Cada requisito, en dos saltos: requisito → tarea → medición.
 
@@ -726,20 +883,73 @@ Cada requisito, en dos saltos: requisito → tarea → medición.
 |---|---|---|---|
 | REQ-SAMP-01 (jitter ≤ 50 µs) | `sampling_tid` | 2.22 µs en reposo (Fig. 5.9); ≤ 9 µs con `calib` (Fig. 4.2, 4.3). Superloop con `calib`: 412 884 µs (Fig. 2.15) | ✔ kernel · ✘ superloop |
 | REQ-SAMP-02 (inicio ≤ 100 µs) | ISR + `sampling_tid` | `lat_peak_us` 9 µs sin traza (Fig. 4.2); 41.94 µs máximo hasta GPIO4 con traza (§3.5) | ✔ |
-| REQ-CTRL-01 (cada 10 ms) | `control_tid` | Pulsos continuos durante `calib` (Fig. 4.3); entra ≤ 11.85 µs tras el muestreo en 1134 décimos ticks (§3.5). Superloop e hilo único: ≈ 400 ms (Fig. 3.4, 3.10) | ✔ kernel · ✘ semanas 2–3 |
-| REQ-CTRL-02 (válvula ≤ 5 ms) | `sampling_tid` detecta, `control_tid` actúa | Por diseño, la sobrepresión se detecta a 1 kHz pero la válvula solo cambia cuando corre el control: peor caso ≈ 10 ms (est.) | **✘ pendiente (semana 6)** |
+| REQ-CTRL-01 (cada 10 ms) | `control_tid` | Pulsos continuos durante `calib` (Fig. 4.3); entra ≤ 11.85 µs tras el muestreo en 1134 décimos ticks (§3.5). Superloop e hilo único: ≈ 400 ms (Fig. 3.4, 3.10). Con candado: `k_sem` 15 032 µs ✘, `k_mutex` 1 116 µs ✔ (Fig. 6.9–6.10); RTA 4 006 µs (§4) | ✔ kernel con `k_mutex` · ✘ semanas 2–3 y con `k_sem` |
+| REQ-CTRL-02 (válvula ≤ 5 ms) | `sampling_tid` detecta, `control_tid` actúa | Antes: 9.056 ms medido (Fig. 6.12), suma del peor caso 12.0 ms ✘. Después del ADR-005: **0.339 µs** medido (Fig. 6.14), suma 1.0 ms | ✔ desde la semana 6 |
 | REQ-CONS-01 (eco ≤ 20 ms) | `console_tid` | Sondeo cada 5 ms + 54 µs por carácter (Fig. 3.6) → ≤ 5.1 ms (est.) | ✔ por diseño, sin medición directa |
 | REQ-TELE-01 (1 s ± 100 ms) | `telemetry_tid` | Periodo de 999 960.8 µs (Fig. 2.11); sueño absoluto en el kernel (líneas `t=` cada 1000 ms, Anexo B). Superloop con `calib`: 1 081 194 µs (Fig. 2.15) | ✔ |
 | REQ-FLOW-01 (≤ 100 ms) | `flow_wq` | Superloop en reposo: 8 µs máximo; con `calib`: 397 952 µs ✘ (Fig. 2.15). Kernel: pulsos de `flow` continuos durante `calib` (Fig. 4.3) | ✔ kernel · ✘ superloop con `calib` |
 | REQ-HMI-01 (500 ms) | `display_tid` | Sin pantalla OLED en nuestro montaje | N/A |
+| REQ-CONS-02 (`calib` ≤ 1 s) | `console_tid` | Antes: 395.2 ms de CPU > 278.8 ms disponibles con Daniela ✘. Después: 4.2 ms de CPU (13.3 ms con traza), 499.9 ms de duración (Fig. 6.15–6.16) | ✔ desde la semana 6 |
 
 ---
 
 ## 4. Análisis de planificabilidad
 
-**Pendiente: semana 6.** Se hará U = ΣC_i/T_i con los `C_i` medidos sin traza de la §1.2, el test aplicable (RM, hiperbólico o EDF) y el RTA como script, con el bloqueo B_i del mutex.
+Script: [`scripts/rta.py`](scripts/rta.py) (`python3 scripts/rta.py`). Usa los `C_i` medidos sin traza (§1.2, Fig. 6.4–6.6) y B = 4 ms (Fig. 6.11). Salida completa en [`logs/lab6/rta_salida.txt`](logs/lab6/rta_salida.txt). `--selftest` reproduce Buttazzo: Fig. 4.13 da R2 = 8 > 7 y la tabla 4.3 da R = 1, 2, 4, 10.
 
-Datos de partida ya medidos: el thread analyzer da 99.11 % de `idle` bajo carga, así que se espera un U del orden de 1 %.
+**Tareas de Daniela (supuesto).** Los parámetros no están en el repositorio del curso (la guía dice *"given in class"*). Se asumieron dos tareas que llevan la carga por encima de la consola a U ≈ 0.72, el valor de referencia del curso (notas de la charla de la semana 6):
+
+| Tarea | C | T = D |
+|---|---|---|
+| sensor_A | 2 ms | 5 ms |
+| sensor_B | 3.2 ms | 10 ms |
+
+Si se conocen los valores reales, solo cambia la tabla `DANIELA` del script.
+
+**4.1 Utilización y pruebas** (prioridades RM):
+
+| Conjunto | U | Liu & Layland | Hiperbólica | EDF (U ≤ 1) |
+|---|---|---|---|---|
+| Fig. 4.13 | 0.9714 | > 0.8284: no concluye | 2.2000 > 2: no concluye | ✔ |
+| Nodo actual (samp, ctrl, tele) | **0.0012** | ≤ 0.7798 ✔ | 1.0012 ≤ 2 ✔ | ✔ |
+| Nodo + Daniela | **0.7212** | ≤ 0.7435 ✔ | 1.8502 ≤ 2 ✔ | ✔ |
+
+Las dos pruebas de RM solo miran el conjunto periódico; no incluyen el bloqueo. La consola es aperiódica y no entra en U. El U del nodo (0.0012) coincide con el 99.11 % de `idle` del thread analyzer (semana 4).
+
+**4.2 RTA**, R_i = C_i + B_i + Σ⌈R_i/T_h⌉·C_h (µs). B_i = B para las tareas desde control hacia abajo; incluye el bloqueo *push-through* de PIP.
+
+| Tarea | Nodo, B = 0 | Nodo, B = 4 ms | Nodo + Daniela, B = 0 | Nodo + Daniela, B = 4 ms | D |
+|---|---|---|---|---|---|
+| sampling | 1.0 | 1.0 | 1.0 | 1.0 | 1 000 |
+| sensor_A | — | — | 2 003.1 | 2 003.1 | 5 000 |
+| control | 2.1 | **4 006.2** | 2 004.1 | **8 010.2** | 10 000 |
+| sensor_B | — | — | 7 209.2 | **11 209.2 ✘** | 10 000 |
+| telemetry | 74.4 | 4 078.4 | 7 281.5 | 18 493.8 | 1 000 000 |
+
+**4.3 Veredicto sobre Daniela.** Sí puede agregar los dos sensores, **con una condición**: las secciones críticas de la consola deben durar ≤ 2.7 ms.
+
+- El conjunto periódico pasa Liu & Layland, la hiperbólica y la RTA sin bloqueo.
+- Con B = 4 ms, sensor_B llega a 11.2 ms > 10 ms, por bloqueo *push-through*.
+- Con B ≤ 2.78 ms, sensor_B cumple (script).
+- Los comandos reales (`set`, `clear`) duran µs; los 3–4 ms son del experimento `inv`.
+
+**4.4 RTA frente a la medición**
+
+| Fila | Medido | RTA | ¿Acota? |
+|---|---|---|---|
+| R de control sin contención | ≈ 13.3 µs (est., Fig. 6.8) | 2.1 µs | **No** |
+| R de control con `k_mutex` | 1 116 µs (Fig. 6.10) | 4 006 µs (B = 4 ms); 3 178 µs con B = 3.173 ms | **Sí** |
+
+- **Por qué no acota la fila sin contención.** Los C_i del GPIO no incluyen el costo del kernel: latencia de ISR ≤ 9 µs (L4) y cambio de contexto ≤ 8.56 µs (Fig. 4.6). Sumados al camino, R ≤ 9 + 1.02 + 8.56 + 1.063 ≈ **19.6 µs ≥ 13.3 µs** ✔.
+- **Por qué una captura de 30 s queda por debajo de la RTA.** La RTA supone el instante crítico: todas las tareas de mayor prioridad liberadas a la vez con su peor C, y la consola recién dentro de su sección crítica más larga. En 30 s esa coincidencia rara vez ocurre. Si una captura superara la RTA, los C_i estarían mal medidos.
+
+**4.5 `calib` y e-stop** (salida del script):
+
+| | Antes del ADR-005 | Después |
+|---|---|---|
+| CPU que deja el conjunto con Daniela (U = 0.7212) | 278.8 ms/s | 278.8 ms/s |
+| CPU que pide `calib` | 395.2 ms ✘ | 13.3 ms ✔ (cota con traza; 4.2 ms sin traza) |
+| E-stop, suma del peor caso | 1 000 + 10 000 + 1.06 + 1 000 + 1.02 = **12 002 µs ✘** | 1 000 + 1.02 = **1 001 µs ✔** |
 
 Desde la semana 12 se agregan el plan de tramas CAN y el presupuesto extremo a extremo:
 
@@ -771,6 +981,12 @@ Pendiente: GUI y enrutamiento del Hub, construidos por un agente desde `spec/hub
 | [`scripts/analizar_lab02.py`](scripts/analizar_lab02.py) | Análisis de un CSV del Logic del AD2: anchos, periodos, jitter y latencia del flujo (semanas 2–3) |
 | `scripts/analizar_traza.py` | Análisis de la traza CTF: cadena de preempción, estadísticas y carga por hilo (semana 5) |
 | [`firmware/esp32s3_devkitc_esp32s3_procpu.overlay`](firmware/esp32s3_devkitc_esp32s3_procpu.overlay) | El port al S3 (semana 3) |
+| [`firmware/lab06/fig413/`](firmware/lab06/fig413/) | Fig. 4.13 de Buttazzo, RM y EDF (semana 6, Tarea A) |
+| [`firmware/lab06/node_w6/`](firmware/lab06/node_w6/) | Nodo con `k_mutex`, `inv` y el ADR-005 (semana 6, Tareas B y C) |
+| [`scripts/rta.py`](scripts/rta.py) | U, Liu & Layland, hiperbólica, RTA con bloqueo, `calib` y e-stop (semana 6, §4) |
+| [`scripts/calib_cpu.py`](scripts/calib_cpu.py) | CPU de `calib` desde la traza CTF, con recuperación de bytes perdidos (semana 6) |
+| [`scripts/trace_diag.py`](scripts/trace_diag.py) | Diagnóstico de trazas que dejan de decodificar (semana 6) |
+| [`logs/lab6/`](logs/lab6/) | Transcripciones de consola y salidas de los scripts (semana 6) |
 
 ### Anexo B — Transcripción de consola, semana 4 (E1)
 
@@ -833,4 +1049,8 @@ Thread analyze:
 
 1. **Línea base del superloop con el Scope.** Repetirla (CH1 `samp`, Period con estadísticas, ≥ 30 s) para reemplazar la cota de ≈ 70 µs (est.) de las semanas 2 y 3.
 2. **Periodo máximo de control en el kernel con `calib`.** Medirlo con el Scope (CH2, Period máximo).
-3. **REQ-CTRL-02.** Medir la latencia de sobrepresión → válvula y rediseñar para cumplir 5 ms (semana 6).
+3. ~~**REQ-CTRL-02.** Medir la latencia de sobrepresión → válvula y rediseñar para cumplir 5 ms (semana 6).~~ Resuelto en la semana 6 (ADR-005): 9.056 ms → 0.339 µs.
+4. **E-stop, 5 disparos.** Las Fig. 6.12 y 6.14 documentan un disparo de cada caso; completar la tabla con los cinco y su máximo.
+5. **R de control sin contención.** Guardar la segunda línea de `status` (`ctrl_R_peak_us`) tras 30 s para reemplazar la estimación de 13.3 µs.
+6. **Tareas de Daniela.** Reemplazar el supuesto de la §4 por los parámetros dados en clase.
+7. **ADR-006.** Verificar los márgenes de pila con `threads` en `node_w6`.
