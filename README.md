@@ -4,7 +4,7 @@ Repositorio de la pareja para **Sistemas en Tiempo Real** (4101137), Universidad
 
 | Integrante | Labs 1–5 |
 |---|---|
-| Anderson Kaleth Ángel Orozco | Pareja |
+| Camilo Yela | Pareja |
 | Camilo Obando | Pareja |
 
 **El informe es [`RET.md`](RET.md)** (Timing Evidence Report): requisitos, tareas, ADRs y la evidencia medida de las semanas 1 a 5, con cada captura enlazada.
