@@ -904,7 +904,6 @@ Script: [`scripts/rta.py`](scripts/rta.py) (`python3 scripts/rta.py`). Usa los `
 | sensor_A | 2 ms | 5 ms |
 | sensor_B | 3.2 ms | 10 ms |
 
-Si se conocen los valores reales, solo cambia la tabla `DANIELA` del script.
 
 **4.1 Utilización y pruebas** (prioridades RM):
 
